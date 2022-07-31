@@ -27,7 +27,7 @@ wip
 
 ## Contribute
 
-[Fork](https://github.com/stagas/tinypratt/fork) or 
+[Fork](https://github.com/stagas/tinypratt/fork) or
 [edit](https://github.dev/stagas/tinypratt) and submit a PR.
 
 All contributions are welcome!

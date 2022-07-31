@@ -1,4 +1,4 @@
-import { createParser, joinRegExp, Node } from '..'
+import { createParser, joinRegExp, Node } from '../src'
 
 describe('parse', () => {
   let parse: (input: string) => Node
@@ -8,8 +8,8 @@ describe('parse', () => {
       joinRegExp(
         [
           /(?<ids>[a-zA-Z_$][a-zA-Z0-9_$]*)/,
-          /(?<num>inf|nan|\d[\d_]*(\.((e[+\-]?)?[\d]+)+[kBb]*|(e[+\-]?[\d]+)?[kBb]*))/,
-          /(?<ops>\+\+|\-\-|\+=|-=|\*=|\/=|%=|<<=|>>=|&=|\^=|\|=|&&|!&|\|\||!=|==|>=|<=|>>|<<|\.\.|[\[\]\(\)\{\}\\\"'`,\-~+*\/%=<>?!:;.|&^@]{1})/,
+          /(?<num>inf|nan|\d[\d_]*(\.((e[+-]?)?[\d]+)+[kBb]*|(e[+-]?[\d]+)?[kBb]*))/,
+          /(?<ops>\+\+|--|\+=|-=|\*=|\/=|%=|<<=|>>=|&=|\^=|\|=|&&|!&|\|\||!=|==|>=|<=|>>|<<|\.\.|[[\](){}\\"'`,\-~+*/%=<>?!:;.|&^@]{1})/,
           /(?<nul>\s+)/,
           /(?<err>.)/,
         ],
@@ -113,7 +113,7 @@ describe('parse', () => {
     expect('' + parse('!1')).toEqual('(! 1)')
     expect('' + parse('!!1')).toEqual('(! (! 1))')
     expect('' + parse('!!1*2')).toEqual('(* (! (! 1)) 2)')
-    expect(() => parse('1+')).toThrow('bad op')
+    expect(() => parse('1+')).toThrow('eof')
     expect('' + parse('1 + +-1')).toEqual('(+ 1 (+ (- 1)))')
     expect('' + parse('1 + 2 * 3')).toEqual('(+ 1 (* 2 3))')
     expect('' + parse('a + b * c * d + e')).toEqual('(+ (+ a (* (* b c) d)) e)')
@@ -125,15 +125,15 @@ describe('parse', () => {
     expect('' + parse('f . g--')).toEqual('(=- (. f g))')
     expect('' + parse('--!f . g')).toEqual('(-- (! (. f g)))')
     expect('' + parse('!--f . g')).toEqual('(! (-- (. f g)))')
-    expect(() => parse('-9!0')).toThrow('bad token')
+    expect(() => parse('-9!0')).toThrow('[ops]: !')
     expect('' + parse('1+!0')).toEqual('(+ 1 (! 0))')
     expect('' + parse('! f . g ')).toEqual('(! (. f g))')
     expect('' + parse('(((0)))')).toEqual('0')
     expect('' + parse('x[0][1]')).toEqual('([ ([ x 0) 1)')
     expect('' + parse('x[y[1]]')).toEqual('([ x ([ y 1))')
     expect(
-      '' +
-        parse(`
+      ''
+        + parse(`
         a ? b
       : c ? d
           : e
@@ -143,10 +143,10 @@ describe('parse', () => {
   })
 
   it('throws on errors', () => {
-    expect(() => parse('(')).toThrow('bad token')
-    expect(() => parse('(1')).toThrow('bad token')
-    expect(() => parse('a[')).toThrow('bad token')
-    expect(() => parse('a[1')).toThrow('bad token')
+    expect(() => parse('(')).toThrow('Expected: \')\'')
+    expect(() => parse('(1')).toThrow('Expected: \')\'')
+    expect(() => parse('a[')).toThrow('Expected: \']\'')
+    expect(() => parse('a[1')).toThrow('Expected: \']\'')
     expect(() => parse('')).not.toThrow()
   })
 })

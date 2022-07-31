@@ -1,16 +1,14 @@
-import { createParser, joinRegExp, Node } from '../'
+import { createParser, joinRegExp, Node } from '../src'
 
 let total = 0
 
 function to_string(node: Node): string {
   total++
-  if (total > 5000) {
+  if (total > 5000)
     throw new Error('Tree too large')
-  }
 
-  if (Array.isArray(node)) {
+  if (Array.isArray(node))
     return '(' + node.map(child => to_string(child)).join(' ') + ')'
-  }
 
   return node != null ? node.value : node
 }
@@ -24,7 +22,7 @@ describe('parse', () => {
         [
           /(?<ids>[a-z_][a-z0-9_]*)/, //
           /(?<num>\d+(\.\d*)?)/,
-          /(?<ops>[\[\]\(\)\",\-~+*\/=<>?!:.|&^@$]{1})/,
+          /(?<ops>[[\]()",\-~+*/=<>?!:.|&^@$]{1})/,
           /(?<nul>\s+)/,
           /(?<err>.)/,
         ],
@@ -67,7 +65,7 @@ describe('parse', () => {
     s = parse('!!1*2')
     expect(to_string(s)).toEqual('(* (! (! 1)) 2)')
 
-    expect(() => parse('1+')).toThrow('bad op')
+    expect(() => parse('1+')).toThrow('eof')
 
     s = parse('1 + +-1')
     expect(to_string(s)).toEqual('(+ 1 (+ (- 1)))')
@@ -90,7 +88,7 @@ describe('parse', () => {
     s = parse('--f . g')
     expect(to_string(s)).toEqual('(- (- (. f g)))')
 
-    expect(() => parse('-9!0')).toThrow('bad token')
+    expect(() => parse('-9!0')).toThrow('[ops]: !')
 
     s = parse('1+!0')
     expect(to_string(s)).toEqual('(+ 1 (! 0))')
@@ -116,14 +114,14 @@ describe('parse', () => {
   })
 
   it('throws on errors', () => {
-    expect(() => parse('%')).toThrow('bad op')
-    expect(() => parse('1+%')).toThrow('bad op')
-    expect(() => parse("1'")).toThrow('bad op')
-    expect(() => parse("'")).toThrow('bad op')
-    expect(() => parse('(')).toThrow('bad token')
-    expect(() => parse('(1')).toThrow('bad token')
-    expect(() => parse('a[')).toThrow('bad token')
-    expect(() => parse('a[1')).toThrow('bad token')
+    expect(() => parse('%')).toThrow('[err]: %')
+    expect(() => parse('1+%')).toThrow('[err]: %')
+    expect(() => parse('1\'')).toThrow('[err]: \'')
+    expect(() => parse('\'')).toThrow('[err]: \'')
+    expect(() => parse('(')).toThrow('Expected: \')\'')
+    expect(() => parse('(1')).toThrow('Expected: \')\'')
+    expect(() => parse('a[')).toThrow('Expected: \']\'')
+    expect(() => parse('a[1')).toThrow('Expected: \']\'')
     expect(() => parse('')).not.toThrow()
   })
 })
