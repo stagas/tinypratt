@@ -2,19 +2,21 @@ import { joinRegExp } from 'join-regexp'
 import { createLexer, Lexer, LexerError, LexerErrorCauses, RegExpToken, Token } from 'lexer-next'
 import * as ParserErrorCauses from './causes'
 
+export { Token }
 export { ParserErrorCauses }
-
 export { joinRegExp }
 
-export interface NodeArray extends Array<Token | Node | NodeArray> {
-  [k: number]: Token | Node | NodeArray
+export type { TokenJson } from 'lexer-next'
+export type { LexerError }
+
+export interface NodeArray extends Array<Node | NodeArray | Token> {
+  [k: number]: Node | NodeArray | Token
 }
 
 export type Node = (NodeArray | Token) & {
+  lexer?: Lexer
   toString(): string
 }
-
-export type { LexerError, Token }
 
 const nodeToString = (node: Node): string =>
   Array.isArray(node) ? '(' + node.map(child => nodeToString(child)).join(' ') + ')' : node != null ? node.value : '()'
@@ -37,6 +39,7 @@ interface ImplTableFactoryProps {
   advance: Lexer['advance']
   accept: Lexer['accept']
   expect: Lexer['expect']
+  unknown: Lexer['unknown']
 
   never: Impl
   pass: Impl
@@ -68,9 +71,10 @@ export class ParserError extends Error {
 
 export const createParser = (regexp: RegExp, fn: ImplTableFactory) => {
   const tokenizer = (input: string) => input.matchAll(new RegExpToken(regexp))
-  const lexer = createLexer(tokenizer)
+  const Lexer = createLexer(tokenizer)
   const parse = (input: string) => {
-    const { onerror, filter, peek, advance, expect, accept } = lexer(input)
+    const lexer = Lexer(input)
+    const { onerror, filter, peek, advance, expect, accept, unknown } = lexer
 
     filter((token: Token) => token.group !== 'nul')
 
@@ -109,7 +113,7 @@ export const createParser = (regexp: RegExp, fn: ImplTableFactory) => {
 
     const bp = (t: Token) => desc(t)[0]
     const desc = (t: Token) => {
-      const ctx = impl[t] ?? impl[t.group]
+      const ctx = impl[`${t}`] ?? impl[t.group]
       if (!ctx) throw new ParserError(new ParserErrorCauses.BadOp(t))
       return ctx
     }
@@ -137,6 +141,7 @@ export const createParser = (regexp: RegExp, fn: ImplTableFactory) => {
       advance,
       accept,
       expect,
+      unknown,
 
       never,
       pass,
@@ -150,6 +155,7 @@ export const createParser = (regexp: RegExp, fn: ImplTableFactory) => {
 
     const node = expr(0)
     if (node) {
+      node.lexer = lexer
       node.toString = function() {
         return nodeToString(this)
       }
